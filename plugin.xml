@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="kimberley-plugin-imagefilter" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+	<name>ImageFilter</name>
+	<js-module name="ImageFilterPlugin" src="www/ImageFilterPlugin.js">
+		<clobbers target="imageFilter"/>
+	</js-module>
+	<platform name="ios">
+		<config-file parent="/*" target="config.xml">
+			<feature name="ImageFilterPlugin">
+				<param name="ios-package" value="ImageFilterPlugin"/>
+			</feature>
+		</config-file>
+		<header-file src="src/ios/ImageFilterPlugin.h"/>
+		<source-file src="src/ios/ImageFilterPlugin.m"/>
+	</platform>
+</plugin>
