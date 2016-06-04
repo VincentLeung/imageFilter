@@ -30,7 +30,9 @@ imageFilter.applyFilter(args, successCallBack, errorCallBack);
 ```
 
 ## Installation
-`cordova plugin add kimberley-plugin-imagefilter`
+```javascript
+cordova plugin add kimberley-plugin-imagefilter
+```
 
 # Supporting platform
 * iOS
