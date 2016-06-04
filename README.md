@@ -43,7 +43,7 @@ A simple test app is included, please add ios platform before try
 ### Test App Screen
 | Before | After |
 | --- | --- |
-| [<img src='test-app-screens/before-faceMask.png'>Before apply the anonymous face filter](test-app-screens/before-faceMask.png) | [<img src='test-app-screens/after-faceMask.png'>After apply the anonymous face filter](test-app-screens/after-faceMask.png) |
+| [<img src='test-app-screens/before-faceMask.png'>Before the anonymous face filter](test-app-screens/before-faceMask.png) | [<img src='test-app-screens/after-faceMask.png'>After the anonymous face filter](test-app-screens/after-faceMask.png) |
 
 
 # Supporting platform
