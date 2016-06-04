@@ -34,6 +34,18 @@ imageFilter.applyFilter(args, successCallBack, errorCallBack);
 cordova plugin add kimberley-plugin-imagefilter
 ```
 
+## Test App
+A simple test app is included, please add ios platform before try
+1. `cordova platform add ios`
+2. `cordova prepare ios`
+3. Use Xcode to try it or use `cordova run ...`
+
+### Test App Screen
+| Before | After |
+| --- | --- |
+| [<img src='test-app-screens/before-faceMask.png'>Before apply the anonymous face filter](test-app-screens/before-faceMask.png) | [<img src='test-app-screens/after-faceMask.png'>After apply the anonymous face filter](test-app-screens/after-faceMask.png) |
+
+
 # Supporting platform
 * iOS
 
