@@ -1,0 +1,31 @@
+{
+  "name": "kimberley-plugin-imagefilter",
+  "version": "0.0.1",
+  "description": "Cordova plugin: image filter",
+  "cordova": {
+    "id": "kimberley-plugin-imagefilter",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VincentLeung/imageFilter.git"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova-ios",
+    "image filter",
+    "face detection",
+    "face recognition",
+    "cordova image filter",
+    "cordova face detection",
+    "cordova face recognition"
+  ],
+  "author": "Vincent Leung",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VincentLeung/imageFilter/issues"
+  },
+  "homepage": "https://github.com/VincentLeung/imageFilter#readme"
+}
