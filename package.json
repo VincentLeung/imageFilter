@@ -1,6 +1,6 @@
 {
   "name": "kimberley-plugin-imagefilter",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Cordova plugin: image filter",
   "cordova": {
     "id": "kimberley-plugin-imagefilter",
