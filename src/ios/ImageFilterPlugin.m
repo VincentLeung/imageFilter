@@ -3,23 +3,35 @@
 
 @implementation ImageFilterPlugin
 
-- (NSURL*)getTargetUrl:(NSString*)src
+- (NSURL*)getTargetUrl
 {
     NSURL *documentsDir = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] firstObject];
-    NSString *filename = [NSString stringWithFormat:@"%f-%@", [NSDate timeIntervalSinceReferenceDate], [src lastPathComponent]];
+    NSString *filename = [NSString stringWithFormat:@"%f-%d", [NSDate timeIntervalSinceReferenceDate], arc4random_uniform(64)];
     NSURL *fileURL = [documentsDir URLByAppendingPathComponent:filename];
     return fileURL;
 }
 
-- (BOOL)saveImage:(CIImage*)image context:(CIContext*)context fileURL:(NSURL*)fileURL
+- (NSData*)getImageData:(CIImage*)image context:(CIContext*)context
 {
     CGRect extent = [image extent];
     CGImageRef cgImage = [context createCGImage:image fromRect:extent];
     UIImage* finalImage = [UIImage imageWithCGImage:cgImage];
-    
     CGImageRelease(cgImage);
+    return UIImagePNGRepresentation(finalImage);
+}
+
+- (BOOL)saveImage:(CIImage*)image context:(CIContext*)context fileURL:(NSURL*)fileURL
+{
+    NSData* imageData = [self getImageData:image context:context];
     
-    return [UIImagePNGRepresentation(finalImage) writeToURL:fileURL atomically:YES];
+    return [imageData writeToURL:fileURL atomically:YES];
+}
+
+- (NSString*)getImageDataInBase64:(CIImage*)image context:(CIContext*)context
+{
+    NSData* imageData = [self getImageData:image context:context];
+    
+    return [imageData base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed];
 }
 
 - (CIImage*)getRawCIImage:(NSString*)path
@@ -99,6 +111,12 @@
     return image;
 }
 
+- (BOOL)getBoolInDict:(NSDictionary*)dict forKey:(NSString*)key defaultVal:(BOOL)defaultVal
+{
+    id val = [dict valueForKey:key];
+    return (val) ? [val boolValue] : defaultVal;
+}
+
 - (NSNumber*)getNumberInDict:(NSDictionary*)dict forKey:(NSString*)key defaultVal:(NSNumber*)defaultVal
 {
     NSNumber* number = nil;
@@ -134,12 +152,13 @@
         image = [self applyFilter_CISepiaTone:image intensity:intensity];
     }
     
-    NSURL *targetFileURL = [self getTargetUrl:src];
-    NSString* resultUrlStr = src;
-    if ([self saveImage:image context:context fileURL:targetFileURL]) {
-        resultUrlStr = [targetFileURL absoluteString];
+    if ([self getBoolInDict:filter forKey:@"saveToDisk" defaultVal:NO]){
+        NSURL *targetFileURL = [self getTargetUrl];
+        if ([self saveImage:image context:context fileURL:targetFileURL]) {
+            return [targetFileURL absoluteString];
+        }
     }
-    return resultUrlStr;
+    return [self getImageDataInBase64:image context:context];
 }
 
 - (void)applyFilter:(CDVInvokedUrlCommand*)command
