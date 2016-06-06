@@ -4,5 +4,7 @@
   // Member variables go here.
 }
 
+@property (nonatomic, retain) CIContext* ctx;
+
 - (void)applyFilter:(CDVInvokedUrlCommand*)command;
 @end

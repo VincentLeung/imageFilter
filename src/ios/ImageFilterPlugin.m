@@ -2,6 +2,7 @@
 #import <Cordova/CDV.h>
 
 @implementation ImageFilterPlugin
+@synthesize ctx;
 
 - (NSURL*)getTargetUrl
 {
@@ -140,12 +141,14 @@
 
 - (NSString*)applyFilterAt:(NSString*)src filter:(NSDictionary*)filter
 {
-    CIContext *context = [CIContext contextWithOptions:nil];
+    if (self.ctx == nil) {
+        self.ctx = [CIContext contextWithOptions:nil];
+    }
     CIImage* image = [self getRawCIImage:src];
     
     NSString* filterName = [filter valueForKey:@"name"];
     if ([filterName compare:@"AnonymousFaces"] == NSOrderedSame) {
-        image = [self applyFilter_AnonymousFaces:image context:context];
+        image = [self applyFilter_AnonymousFaces:image context:self.ctx];
     }
     if ([filterName compare:@"SepiaTone"] == NSOrderedSame) {
         NSNumber* intensity = [self getNumberInDict:filter forKey:@"intensity" defaultVal:@0];
@@ -154,11 +157,11 @@
     
     if ([self getBoolInDict:filter forKey:@"saveToDisk" defaultVal:NO]){
         NSURL *targetFileURL = [self getTargetUrl];
-        if ([self saveImage:image context:context fileURL:targetFileURL]) {
+        if ([self saveImage:image context:self.ctx fileURL:targetFileURL]) {
             return [targetFileURL absoluteString];
         }
     }
-    return [self getImageDataInBase64:image context:context];
+    return [self getImageDataInBase64:image context:self.ctx];
 }
 
 - (void)applyFilter:(CDVInvokedUrlCommand*)command
