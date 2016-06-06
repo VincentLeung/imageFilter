@@ -1,163 +1,197 @@
-#import "ImageFilterPlugin.h"
-#import <Cordova/CDV.h>
+/*
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
 
-@implementation ImageFilterPlugin
+ http://www.apache.org/licenses/LICENSE-2.0
 
-- (NSURL*)getTargetUrl:(NSString*)src
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+ */
+
+#import "CDVUIWebViewEngine.h"
+#import "CDVUIWebViewDelegate.h"
+#import "CDVUIWebViewNavigationDelegate.h"
+#import "NSDictionary+CordovaPreferences.h"
+
+#import <objc/message.h>
+
+@interface CDVUIWebViewEngine ()
+
+@property (nonatomic, strong, readwrite) UIView* engineWebView;
+@property (nonatomic, strong, readwrite) id <UIWebViewDelegate> uiWebViewDelegate;
+@property (nonatomic, strong, readwrite) CDVUIWebViewNavigationDelegate* navWebViewDelegate;
+
+@end
+
+@implementation CDVUIWebViewEngine
+
+@synthesize engineWebView = _engineWebView;
+
+- (instancetype)initWithFrame:(CGRect)frame
 {
-    NSURL *documentsDir = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] firstObject];
-    NSString *filename = [NSString stringWithFormat:@"%f-%@", [NSDate timeIntervalSinceReferenceDate], [src lastPathComponent]];
-    NSURL *fileURL = [documentsDir URLByAppendingPathComponent:filename];
-    return fileURL;
-}
-
-- (BOOL)saveImage:(CIImage*)image context:(CIContext*)context fileURL:(NSURL*)fileURL
-{
-    CGRect extent = [image extent];
-    CGImageRef cgImage = [context createCGImage:image fromRect:extent];
-    UIImage* finalImage = [UIImage imageWithCGImage:cgImage];
-    
-    CGImageRelease(cgImage);
-    
-    return [UIImagePNGRepresentation(finalImage) writeToURL:fileURL atomically:YES];
-}
-
-- (CIImage*)getRawCIImage:(NSString*)path
-{
-    UIImage* rawImage = [UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:path]]];
-    CIImage* image = [CIImage imageWithCGImage:rawImage.CGImage];
-    return image;
-}
-
-- (CIImage*)applyFilter_CISepiaTone:(CIImage*)image intensity:(NSNumber*)intensity
-{
-    if ([intensity doubleValue] > 1 || [intensity doubleValue] <= 0) {
-        intensity = @0.8f;
+    self = [super init];
+    if (self) {
+        self.engineWebView = [[UIWebView alloc] initWithFrame:frame];
+        NSLog(@"Using UIWebView");
     }
-    CIFilter *filter = [CIFilter filterWithName:@"CISepiaTone"];
-    [filter setValue:image forKey:kCIInputImageKey];
-    [filter setValue:intensity forKey:kCIInputIntensityKey];
-    CIImage *result = [filter valueForKey:kCIOutputImageKey];
-    return result;
+
+    return self;
 }
 
-- (CIImage*)applyFilter_Pixellate:(CIImage*)image scale:(NSNumber*)scale
+- (void)pluginInitialize
 {
-    CIFilter *filter = [CIFilter filterWithName:@"CIPixellate"];
-    [filter setValue:image forKey:kCIInputImageKey];
-    [filter setValue:scale forKey:kCIInputScaleKey];
-    CIImage *result = [filter valueForKey:kCIOutputImageKey];
-    return result;
+    // viewController would be available now. we attempt to set all possible delegates to it, by default
+
+    UIWebView* uiWebView = (UIWebView*)_engineWebView;
+
+    if ([self.viewController conformsToProtocol:@protocol(UIWebViewDelegate)]) {
+        self.uiWebViewDelegate = [[CDVUIWebViewDelegate alloc] initWithDelegate:(id <UIWebViewDelegate>)self.viewController];
+        uiWebView.delegate = self.uiWebViewDelegate;
+    } else {
+        self.navWebViewDelegate = [[CDVUIWebViewNavigationDelegate alloc] initWithEnginePlugin:self];
+        self.uiWebViewDelegate = [[CDVUIWebViewDelegate alloc] initWithDelegate:self.navWebViewDelegate];
+        uiWebView.delegate = self.uiWebViewDelegate;
+    }
+
+    [self updateSettings:self.commandDelegate.settings];
 }
 
-- (CIImage*)getFaceMaskImage:(CIImage*)image context:(CIContext*)context
+- (void)evaluateJavaScript:(NSString*)javaScriptString completionHandler:(void (^)(id, NSError*))completionHandler
 {
-    NSDictionary *opts = @{ CIDetectorAccuracy : CIDetectorAccuracyHigh };
-    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeFace
-                                              context:context
-                                              options:opts];
-    
-    NSArray *faceArray = [detector featuresInImage:image options:nil];
-    CIImage *maskImage = nil;
-    
-    for (CIFeature *f in faceArray) {
-        CGFloat centerX = f.bounds.origin.x + f.bounds.size.width / 2.0;
-        CGFloat centerY = f.bounds.origin.y + f.bounds.size.height / 2.0;
-        CGFloat radius = MIN(f.bounds.size.width, f.bounds.size.height) / 1.5;
-        NSDictionary *radialGadientParams = @{@"inputRadius0": @(radius),
-                                              @"inputRadius1": @(radius + 1.0f),
-                                              @"inputColor0": [CIColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:1.0],
-                                              @"inputColor1": [CIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.0],
-                                              kCIInputCenterKey: [CIVector vectorWithX:centerX Y:centerY]};
-        CIFilter *radialGradient = [CIFilter filterWithName:@"CIRadialGradient" withInputParameters:radialGadientParams];
-        CIImage *circleImage = [radialGradient valueForKey:kCIOutputImageKey];
-        if (maskImage == nil) {
-            maskImage = circleImage;
+    NSString* ret = [(UIWebView*)_engineWebView stringByEvaluatingJavaScriptFromString:javaScriptString];
+
+    if (completionHandler) {
+        completionHandler(ret, nil);
+    }
+}
+
+- (id)loadRequest:(NSURLRequest*)request
+{
+    [(UIWebView*)_engineWebView loadRequest:request];
+    return nil;
+}
+
+- (id)loadHTMLString:(NSString*)string baseURL:(NSURL*)baseURL
+{
+    [(UIWebView*)_engineWebView loadHTMLString:string baseURL:baseURL];
+    return nil;
+}
+
+- (NSURL*)URL
+{
+    return [[(UIWebView*)_engineWebView request] URL];
+}
+
+- (BOOL) canLoadRequest:(NSURLRequest*)request
+{
+    return (request != nil);
+}
+
+- (void)updateSettings:(NSDictionary*)settings
+{
+    UIWebView* uiWebView = (UIWebView*)_engineWebView;
+
+    uiWebView.scalesPageToFit = [settings cordovaBoolSettingForKey:@"EnableViewportScale" defaultValue:NO];
+    uiWebView.allowsInlineMediaPlayback = [settings cordovaBoolSettingForKey:@"AllowInlineMediaPlayback" defaultValue:NO];
+    uiWebView.mediaPlaybackRequiresUserAction = [settings cordovaBoolSettingForKey:@"MediaPlaybackRequiresUserAction" defaultValue:YES];
+    uiWebView.mediaPlaybackAllowsAirPlay = [settings cordovaBoolSettingForKey:@"MediaPlaybackAllowsAirPlay" defaultValue:YES];
+    uiWebView.keyboardDisplayRequiresUserAction = [settings cordovaBoolSettingForKey:@"KeyboardDisplayRequiresUserAction" defaultValue:YES];
+    uiWebView.suppressesIncrementalRendering = [settings cordovaBoolSettingForKey:@"SuppressesIncrementalRendering" defaultValue:NO];
+    uiWebView.gapBetweenPages = [settings cordovaFloatSettingForKey:@"GapBetweenPages" defaultValue:0.0];
+    uiWebView.pageLength = [settings cordovaFloatSettingForKey:@"PageLength" defaultValue:0.0];
+
+    id prefObj = nil;
+
+    // By default, DisallowOverscroll is false (thus bounce is allowed)
+    BOOL bounceAllowed = !([settings cordovaBoolSettingForKey:@"DisallowOverscroll" defaultValue:NO]);
+
+    // prevent webView from bouncing
+    if (!bounceAllowed) {
+        if ([uiWebView respondsToSelector:@selector(scrollView)]) {
+            ((UIScrollView*)[uiWebView scrollView]).bounces = NO;
         } else {
-            NSDictionary *sourceOverCompositingParams = @{kCIInputImageKey: circleImage,
-                                                          kCIInputBackgroundImageKey: maskImage};
-            maskImage = [[CIFilter filterWithName:@"CISourceOverCompositing" withInputParameters:sourceOverCompositingParams] valueForKey:kCIOutputImageKey];
-        }
-    }
-    return maskImage;
-}
-
-- (CIImage*)applyFilter_AnonymousFaces:(CIImage*)image context:(CIContext*)context
-{
-    float scale = MAX([image extent].size.width, [image extent].size.height) * 0.025;
-    CIImage* maskImage = [self getFaceMaskImage:image context:context];
-    if (maskImage != nil) {
-        CIImage* pixellateImage = [self applyFilter_Pixellate:image scale:@(scale)];
-        CIImage* result = [[CIFilter filterWithName:@"CIBlendWithMask"
-                                withInputParameters:@{
-                                                      kCIInputImageKey: pixellateImage,
-                                                      kCIInputBackgroundImageKey: image,
-                                                      kCIInputMaskImageKey: maskImage
-                                                      }] valueForKey:kCIOutputImageKey];
-        return result;
-    }
-    return image;
-}
-
-- (NSNumber*)getNumberInDict:(NSDictionary*)dict forKey:(NSString*)key defaultVal:(NSNumber*)defaultVal
-{
-    NSNumber* number = nil;
-    id val = [dict valueForKey:key];
-    if (val != nil) {
-        if ([val isKindOfClass:[NSString class]]) {
-            NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
-            f.numberStyle = NSNumberFormatterDecimalStyle;
-            number = [f numberFromString:val];
-        } else {
-            if ([val isKindOfClass:[NSNumber class]]) {
-                number = val;
+            for (id subview in self.webView.subviews) {
+                if ([[subview class] isSubclassOfClass:[UIScrollView class]]) {
+                    ((UIScrollView*)subview).bounces = NO;
+                }
             }
         }
-    }    
-    if (number == nil) {
-        return defaultVal;
     }
-    return number;
+
+    NSString* decelerationSetting = [settings cordovaSettingForKey:@"UIWebViewDecelerationSpeed"];
+    if (![@"fast" isEqualToString:decelerationSetting]) {
+        [uiWebView.scrollView setDecelerationRate:UIScrollViewDecelerationRateNormal];
+    }
+
+    NSInteger paginationBreakingMode = 0; // default - UIWebPaginationBreakingModePage
+    prefObj = [settings cordovaSettingForKey:@"PaginationBreakingMode"];
+    if (prefObj != nil) {
+        NSArray* validValues = @[@"page", @"column"];
+        NSString* prefValue = [validValues objectAtIndex:0];
+
+        if ([prefObj isKindOfClass:[NSString class]]) {
+            prefValue = prefObj;
+        }
+
+        paginationBreakingMode = [validValues indexOfObject:[prefValue lowercaseString]];
+        if (paginationBreakingMode == NSNotFound) {
+            paginationBreakingMode = 0;
+        }
+    }
+    uiWebView.paginationBreakingMode = paginationBreakingMode;
+
+    NSInteger paginationMode = 0; // default - UIWebPaginationModeUnpaginated
+    prefObj = [settings cordovaSettingForKey:@"PaginationMode"];
+    if (prefObj != nil) {
+        NSArray* validValues = @[@"unpaginated", @"lefttoright", @"toptobottom", @"bottomtotop", @"righttoleft"];
+        NSString* prefValue = [validValues objectAtIndex:0];
+
+        if ([prefObj isKindOfClass:[NSString class]]) {
+            prefValue = prefObj;
+        }
+
+        paginationMode = [validValues indexOfObject:[prefValue lowercaseString]];
+        if (paginationMode == NSNotFound) {
+            paginationMode = 0;
+        }
+    }
+    uiWebView.paginationMode = paginationMode;
 }
 
-- (NSString*)applyFilterAt:(NSString*)src filter:(NSDictionary*)filter
+- (void)updateWithInfo:(NSDictionary*)info
 {
-    CIContext *context = [CIContext contextWithOptions:nil];
-    CIImage* image = [self getRawCIImage:src];
-    
-    NSString* filterName = [filter valueForKey:@"name"];
-    if ([filterName compare:@"AnonymousFaces"] == NSOrderedSame) {
-        image = [self applyFilter_AnonymousFaces:image context:context];
+    UIWebView* uiWebView = (UIWebView*)_engineWebView;
+
+    id <UIWebViewDelegate> uiWebViewDelegate = [info objectForKey:kCDVWebViewEngineUIWebViewDelegate];
+    NSDictionary* settings = [info objectForKey:kCDVWebViewEngineWebViewPreferences];
+
+    if (uiWebViewDelegate &&
+        [uiWebViewDelegate conformsToProtocol:@protocol(UIWebViewDelegate)]) {
+        self.uiWebViewDelegate = [[CDVUIWebViewDelegate alloc] initWithDelegate:(id <UIWebViewDelegate>)self.viewController];
+        uiWebView.delegate = self.uiWebViewDelegate;
     }
-    if ([filterName compare:@"SepiaTone"] == NSOrderedSame) {
-        NSNumber* intensity = [self getNumberInDict:filter forKey:@"intensity" defaultVal:@0];
-        image = [self applyFilter_CISepiaTone:image intensity:intensity];
+
+    if (settings && [settings isKindOfClass:[NSDictionary class]]) {
+        [self updateSettings:settings];
     }
-    
-    NSURL *targetFileURL = [self getTargetUrl:src];
-    NSString* resultUrlStr = src;
-    if ([self saveImage:image context:context fileURL:targetFileURL]) {
-        resultUrlStr = [targetFileURL absoluteString];
-    }
-    return resultUrlStr;
 }
 
-- (void)applyFilter:(CDVInvokedUrlCommand*)command
+// This forwards the methods that are in the header that are not implemented here.
+// Both WKWebView and UIWebView implement the below:
+//     loadHTMLString:baseURL:
+//     loadRequest:
+- (id)forwardingTargetForSelector:(SEL)aSelector
 {
-    NSDictionary* params = [command argumentAtIndex:0];
-    NSString* srcUrl = [params valueForKey:@"srcUrl"];
-    NSDictionary* filter = [params valueForKey:@"filter"];
-    
-    if (srcUrl == nil || [srcUrl length] <= 0 || filter == nil || [filter count] <= 0) {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    } else {
-        [self.commandDelegate runInBackground:^{
-            NSString* resultUrlStr = [self applyFilterAt:srcUrl filter:filter];
-            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:resultUrlStr];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        }];
-    }
+    return _engineWebView;
 }
 
 @end

@@ -37,28 +37,59 @@ var app = {
         document.getElementById('previousImage').addEventListener('click', this.previousImage, false);
         document.getElementById('nextImage').addEventListener('click', this.nextImage, false);
         this.heroImg.addEventListener('load', this.loadImage);
+
+        var canvas = document.getElementById('canvas');
+        var canvas2 = document.getElementById('canvas2');
+        // var ctx = canvas.getContext('2d');
+        var ctx2 = canvas2.getContext('2d');
+        var video = document.getElementById('video');
+
+        // set canvas size = video size when known
+        video.addEventListener('loadedmetadata', function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+
+        video.addEventListener('play', function(event) {
+            var $this = this; //cache
+            (function loop() {
+                if (!$this.paused && !$this.ended) {
+                    ctx2.drawImage($this, 0, 0, canvas.width, canvas.height);
+                    imageFilter.applyFilter({ srcUrl: canvas2.toDataURL(), filter: { name: 'AnonymousFaces' } },
+                        function(filteredImg) {
+                            // ctx.drawImage(filteredImg, 0, 0, 320, 240);
+                            canvas.src = filteredImg;
+                            // setTimeout(loop, 1000 / 30); // drawing at 30fps
+                            setTimeout(loop); // drawing at 30fps
+                        },
+                        function() {
+                            console.log('imageFilter.applyFilter() failed');
+                        });
+                }
+            })();
+        }, 0);
+
     },
     applyFilter: function(filter) {
         app.showFilterPanel(false);
         // call the plugin: imageFilter.applyFilter()
-        imageFilter.applyFilter(
-            {srcUrl: app.heroImg.src, filter: filter},
-            function(filteredImg){
+        imageFilter.applyFilter({ srcUrl: app.heroImg.src, filter: filter },
+            function(filteredImg) {
                 app.heroImg.src = filteredImg;
                 app.showFilterPanel(true);
             },
-            function(){
+            function() {
                 app.showFilterPanel(true);
                 console.log('imageFilter.applyFilter() failed');
             });
     },
     applyFaceFilter: function(event) {
         event.preventDefault();
-        app.applyFilter({name:'AnonymousFaces'});
+        app.applyFilter({ name: 'AnonymousFaces' });
     },
     applySepiaToneFilter: function(event) {
         event.preventDefault();
-        app.applyFilter({name:'SepiaTone', intensity: 0.7});
+        app.applyFilter({ name: 'SepiaTone', intensity: 0.7 });
     },
     loadImage: function() {
         document.getElementById('heroImgWidth').textContent = this.naturalWidth;
@@ -93,6 +124,7 @@ var app = {
     onDeviceReady: function() {
         app.setImage();
         app.showFilterPanel(true);
+        // document.getElementById('video').play();
     }
 };
 

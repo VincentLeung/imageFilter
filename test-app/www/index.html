@@ -43,6 +43,22 @@
                 Width: <span id="heroImgWidth"></span>
                 Height: <span id="heroImgHeight"></span>
             </div>
+            <div id="theater">
+<!--
+    To let webkit-playsinline work on iOS, it is required to make the following changes on the iOS app
+MainViewController.m
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    ((UIWebView*) self.webView).allowsInlineMediaPlayback = true;
+    // Do any additional setup after loading the view from its nib.
+}
+-->
+              <video id="video" src="video/video1.mp4" controls="false" webkit-playsinline></video>
+              <img id="canvas" style="width: 100%;"/>
+              <canvas id="canvas2" style="display:none;"></canvas>
+            </div> 
             <div class="filterPanel" id="filterPanel">
                 <p class="button" id="previousImage">Previous</p>
                 <p class="button" id="nextImage">Next</p>
