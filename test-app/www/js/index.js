@@ -43,7 +43,7 @@ var app = {
         document.getElementById('nextImage').addEventListener('click', this.nextImage, false);
         this.heroImg.addEventListener('load', this.loadImage);
         this.video.addEventListener('loadedmetadata', this.adjustCanvasDimension, false);
-        this.video.addEventListener('loadeddata', app.applyAnonymousFaceFilterOnVideoBody, false);
+        this.video.addEventListener('loadeddata', this.applyAnonymousFaceFilterOnVideoBody, false);
         this.video.addEventListener('play', this.applyAnonymousFaceFilterOnVideo, false);
     },
     adjustCanvasDimension: function() {
