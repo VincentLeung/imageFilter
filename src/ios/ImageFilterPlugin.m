@@ -31,7 +31,7 @@
 {
     NSData* imageData = [self getImageData:image context:context];
     
-    return [imageData base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed];
+    return [NSString stringWithFormat:@"data:image/png;base64,%@", [imageData base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed]];
 }
 
 - (CIImage*)getRawCIImage:(NSString*)path
