@@ -23,6 +23,11 @@ var app = {
     // Application Constructor
     initialize: function() {
         this.heroImg = document.getElementById('heroImg');
+        this.video = document.getElementById('video');
+        this.canvas = document.createElement("canvas");
+        this.ctx = this.canvas.getContext('2d');
+        this.videoImg = document.getElementById('videoImage');
+        this.anonymousFacesFilter = { name: 'AnonymousFaces' };
         this.bindEvents();
     },
     // Bind Event Listeners
@@ -37,38 +42,33 @@ var app = {
         document.getElementById('previousImage').addEventListener('click', this.previousImage, false);
         document.getElementById('nextImage').addEventListener('click', this.nextImage, false);
         this.heroImg.addEventListener('load', this.loadImage);
-
-        var canvas = document.getElementById('canvas');
-        var canvas2 = document.getElementById('canvas2');
-        // var ctx = canvas.getContext('2d');
-        var ctx2 = canvas2.getContext('2d');
-        var video = document.getElementById('video');
-
-        // set canvas size = video size when known
-        video.addEventListener('loadedmetadata', function() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-        });
-
-        video.addEventListener('play', function(event) {
-            var $this = this; //cache
-            (function loop() {
-                if (!$this.paused && !$this.ended) {
-                    ctx2.drawImage($this, 0, 0, canvas.width, canvas.height);
-                    imageFilter.applyFilter({ srcUrl: canvas2.toDataURL(), filter: { name: 'AnonymousFaces' } },
-                        function(filteredImg) {
-                            // ctx.drawImage(filteredImg, 0, 0, 320, 240);
-                            canvas.src = filteredImg;
-                            // setTimeout(loop, 1000 / 30); // drawing at 30fps
-                            setTimeout(loop); // drawing at 30fps
-                        },
-                        function() {
-                            console.log('imageFilter.applyFilter() failed');
-                        });
-                }
-            })();
-        }, 0);
-
+        this.video.addEventListener('loadedmetadata', this.adjustCanvasDimension, false);
+        this.video.addEventListener('loadeddata', app.applyAnonymousFaceFilterOnVideoBody, false);
+        this.video.addEventListener('play', this.applyAnonymousFaceFilterOnVideo, false);
+    },
+    adjustCanvasDimension: function() {
+        app.canvas.width = this.videoWidth;
+        app.canvas.height = this.videoHeight;
+    },
+    applyAnonymousFaceFilterOnVideoBody: function() {
+        app.ctx.drawImage(app.video, 0, 0, app.canvas.width, app.canvas.height);
+        imageFilter.applyFilter({ srcUrl: app.canvas.toDataURL(), filter: app.anonymousFacesFilter },
+            app.applyAnonymousFaceFilterOnVideoSuccessCB,
+            app.applyAnonymousFaceFilterOnVideoFailCB);
+    },
+    applyAnonymousFaceFilterOnVideoSuccessCB: function(filteredImg) {
+        app.videoImg.src = filteredImg;
+        // setTimeout(loop, 1000 / 30); // drawing at 30fps
+        setTimeout(app.applyAnonymousFaceFilterOnVideo);
+    },
+    applyAnonymousFaceFilterOnVideoFailCB: function() {
+        app.video.pause();
+        console.log('imageFilter.applyFilter() failed');
+    },
+    applyAnonymousFaceFilterOnVideo: function() {
+        if (!app.video.paused && !app.video.ended) {
+            app.applyAnonymousFaceFilterOnVideoBody();
+        }
     },
     applyFilter: function(filter) {
         app.showFilterPanel(false);
@@ -85,7 +85,7 @@ var app = {
     },
     applyFaceFilter: function(event) {
         event.preventDefault();
-        app.applyFilter({ name: 'AnonymousFaces' });
+        app.applyFilter(app.anonymousFacesFilter);
     },
     applySepiaToneFilter: function(event) {
         event.preventDefault();
@@ -124,7 +124,7 @@ var app = {
     onDeviceReady: function() {
         app.setImage();
         app.showFilterPanel(true);
-        // document.getElementById('video').play();
+        app.video.load();
     }
 };
 
