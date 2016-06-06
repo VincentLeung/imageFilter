@@ -102,14 +102,14 @@ A simple test app is included, please add ios platform before try
 3. Use Xcode to try it or use `cordova run ...`
 
 ### Test App Screen - Image
-| Before | After |
+| Before the anonymous face filter | After the anonymous face filter |
 | --- | --- |
-| [<img src='test-app-screens/before-faceMask.png'>Before the anonymous face filter](test-app-screens/before-faceMask.png) | [<img src='test-app-screens/after-faceMask.png'>After the anonymous face filter](test-app-screens/after-faceMask.png) |
+| [<img src='test-app-screens/before-faceMask.png'>](test-app-screens/before-faceMask.png) | [<img src='test-app-screens/after-faceMask.png'>](test-app-screens/after-faceMask.png) |
 
 ### Test App Screen - Video
-|||
+| Anonymous face filter on video | Anonymous face filter on video |
 | --- | --- |
-| [<img src='test-app-screens/videoMask.png'>Anonymous face filter on video](test-app-screens/videoMask.png) | [<img src='test-app-screens/videoMask2.png'>Anonymous face filter on video](test-app-screens/videoMask2.png) |
+| [<img src='test-app-screens/videoMask.png'>](test-app-screens/videoMask.png) | [<img src='test-app-screens/videoMask2.png'>](test-app-screens/videoMask2.png) |
 
 
 # Supporting platform
