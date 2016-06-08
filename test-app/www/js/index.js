@@ -22,6 +22,10 @@ var app = {
     originalAttrName: 'original',
     // Application Constructor
     initialize: function() {
+        this.rawQueue = new Queue();
+        this.filterQueue = new Queue();
+        this.fpsDelayCapture = 1000 / 5;
+        this.fpsDelayDisplay = 1000 / 10;
         this.heroImg = document.getElementById('heroImg');
         this.video = document.getElementById('video');
         this.canvas = document.createElement("canvas");
@@ -43,32 +47,69 @@ var app = {
         document.getElementById('nextImage').addEventListener('click', this.nextImage, false);
         this.heroImg.addEventListener('load', this.loadImage);
         this.video.addEventListener('loadedmetadata', this.adjustCanvasDimension, false);
-        this.video.addEventListener('loadeddata', this.applyAnonymousFaceFilterOnVideoBody, false);
-        this.video.addEventListener('play', this.applyAnonymousFaceFilterOnVideo, false);
+        // this.video.addEventListener('loadeddata', this.applyAnonymousFaceFilterOnVideoBody, false);
+        this.video.addEventListener('play', this.doPlay, false);
     },
     adjustCanvasDimension: function() {
         app.canvas.width = this.videoWidth;
         app.canvas.height = this.videoHeight;
     },
-    applyAnonymousFaceFilterOnVideoBody: function() {
-        app.ctx.drawImage(app.video, 0, 0, app.canvas.width, app.canvas.height);
-        imageFilter.applyFilter({ srcUrl: app.canvas.toDataURL(), filter: app.anonymousFacesFilter },
+    applyAnonymousFaceFilterOnVideoBody: function(rawData) {
+        imageFilter.applyFilter({ srcUrl: rawData, filter: app.anonymousFacesFilter },
             app.applyAnonymousFaceFilterOnVideoSuccessCB,
             app.applyAnonymousFaceFilterOnVideoFailCB);
     },
     applyAnonymousFaceFilterOnVideoSuccessCB: function(filteredImg) {
-        app.videoImg.src = filteredImg;
-        // setTimeout(loop, 1000 / 30); // drawing at 30fps
-        setTimeout(app.applyAnonymousFaceFilterOnVideo);
+        app.filterQueue.enqueue(filteredImg);
+        requestAnimationFrame(app.startVideoFilter);
     },
     applyAnonymousFaceFilterOnVideoFailCB: function() {
         app.video.pause();
         console.log('imageFilter.applyFilter() failed');
     },
-    applyAnonymousFaceFilterOnVideo: function() {
-        if (!app.video.paused && !app.video.ended) {
-            app.applyAnonymousFaceFilterOnVideoBody();
+    startVideoFilter: function() {
+        var rawData = app.rawQueue.dequeue();
+        if (rawData) {
+            app.applyAnonymousFaceFilterOnVideoBody(rawData);
+        } else {
+            requestAnimationFrame(app.startVideoFilter);
         }
+    },
+    captureRaw: function() {
+        if (!app.video.paused && !app.video.ended) {
+            // console.log(app.video.currentTime);
+            var startTime = new Date().getTime();
+            // console.log(startTime);
+            app.ctx.drawImage(app.video, 0, 0, app.canvas.width, app.canvas.height);
+            app.rawQueue.enqueue(app.canvas.toDataURL());
+            var delay = app.fpsDelayCapture - (new Date().getTime() - startTime);
+            // console.log(app.rawQueue.getLength());
+            if (delay < 0) {
+                delay = 0;
+            }
+            setTimeout(app.captureRaw, delay); // drawing at 30fps
+        }
+    },
+    showFiltered: function() {
+        if (!app.video.paused && !app.video.ended) {
+            var delay = app.fpsDelayDisplay;
+            var startTime = new Date().getTime();
+            // console.log(app.filterQueue.getLength());
+            if (app.filterQueue.getLength() > 3) {
+                var filteredImg = app.filterQueue.dequeue();
+                app.videoImg.src = filteredImg;
+                delay = delay - (new Date().getTime() - startTime);
+                // console.log(delay);
+                if (delay < 0) {
+                    delay = 0;
+                }
+            }
+            setTimeout(app.showFiltered, delay); // drawing at 30fps
+        }
+    },
+    doPlay: function() {
+        app.captureRaw();
+        app.showFiltered();
     },
     applyFilter: function(filter) {
         app.showFilterPanel(false);
@@ -124,7 +165,8 @@ var app = {
     onDeviceReady: function() {
         app.setImage();
         app.showFilterPanel(true);
-        app.video.load();
+        app.startVideoFilter();
+        // app.video.load();
     }
 };
 
