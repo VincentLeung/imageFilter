@@ -46,6 +46,10 @@ body {
                                    /* offset horizontal: half of text area width */
 }
 
+.section {
+    border-bottom: 1px solid gray;
+}
+
 .theater video {
     width: 100%;
 }
