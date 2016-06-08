@@ -24,7 +24,7 @@ var app = {
     initialize: function() {
         this.rawQueue = new Queue();
         this.filterQueue = new Queue();
-        this.fpsDelayCapture = 1000 / 5;
+        this.fpsDelayCapture = 1000 / 3;
         this.fpsDelayDisplay = 1000 / 10;
         this.heroImg = document.getElementById('heroImg');
         this.video = document.getElementById('video');
